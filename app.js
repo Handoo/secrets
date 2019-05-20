@@ -4,7 +4,8 @@ const express = require('express');
 const ejs = require('ejs');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-const md5 = require('md5');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 const app = express();
 
@@ -26,48 +27,69 @@ app.get('/', function(req, res){
     res.render('home');
 });
 
-app.get('/login', function(req, res){
+
+// When a user get and post on the login page
+app.route('/login')
+
+.get(function(req, res){
     res.render('login');
-});
+})
 
-app.get('/register', function(req, res){
-    res.render('register');
-});
-
-app.post('/login', function(req, res){
+.post(function(req, res){
     const username = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
 
-    User.findOne({email: username}, function(err, result){
+    User.findOne({email: username}, function(err, foundUser){
         if(err){
             res.render(err);
         } else {
-            if(result) {
-                if(result.password === password){
-                    res.render('secrets');
-                } else {
-                    res.send('Wrong password');
+            User.findOne({email: username}, function(err, foundUser){
+                if(foundUser) {
+                    bcrypt.compare(password, foundUser.password, function(err, result){
+                        if(result){
+                            res.render('secrets');
+                        }
+                    });
                 }
+            });
+        }
+    });
+
+})
+
+
+
+
+
+
+//When a user get and post on the Register page
+app.route('/register')
+
+.post(function(req, res){
+
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash){
+        const newUser = new User({
+            email: req.body.username,
+            password: hash
+        });
+    
+        newUser.save(function(err){
+            if(!err){
+                res.render('login');
+            } else {
+                res.send(err);
             }
-        }
+        });
     });
+})
+
+.get(function(req, res){
+    res.render('register');
 });
 
-app.post('/register', function(req, res){
 
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
-    });
 
-    newUser.save(function(err){
-        if(!err){
-            res.render('login');
-        } else {
-            res.send(err);
-        }
-    });
-});
+
 
 const port = 3000;
 app.listen(port, function(){
