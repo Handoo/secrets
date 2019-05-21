@@ -32,6 +32,7 @@ const userSchema = new mongoose.Schema({
     email: String,
     password: String,
     googleId: String,
+    secret: String,
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -80,11 +81,16 @@ app.get('/auth/google/secrets',
   });
 
 app.get('/secrets', function(req, res){
-    if (req.isAuthenticated()){
-        res.render('secrets');
-    } else {
-        res.redirect('/secrets');
-    }
+    User.find({'secret': {$ne: null}}, function(err, results){
+        if(err){
+            console.log(err);            
+        } else {
+            if(results) {
+                console.log(results);
+                res.render('secrets', {allSecret: results});
+            }
+        }
+    })
 });
 
 // When a user get and post on the login page
@@ -134,6 +140,31 @@ app.route('/register')
 app.get('/logout', function(req, res){
     req.logout();
     res.redirect('/');
+});
+
+app.get('/submit', function(req, res){
+    if(req.isAuthenticated()){
+        res.render('submit');
+    } else {
+        res.redirect('/login');
+    }
+});
+
+app.post('/submit', function(req, res){
+    const secretText = req.body.secret;
+
+    User.findById(req.user.id, function(err, foundUser){
+        if(err){
+            console.log(err);
+        } else {
+            if(foundUser){
+                foundUser.secret = secretText;
+                foundUser.save(function(){
+                    res.redirect('/secrets');
+                });
+            }
+        }
+    });
 });
 
 const port = 3000;
