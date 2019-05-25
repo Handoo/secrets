@@ -33,6 +33,7 @@ const userSchema = new mongoose.Schema({
     password: String,
     googleId: String,
     secret: String,
+    username: String,
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -81,16 +82,20 @@ app.get('/auth/google/secrets',
   });
 
 app.get('/secrets', function(req, res){
-    User.find({'secret': {$ne: null}}, function(err, results){
-        if(err){
-            console.log(err);            
-        } else {
-            if(results) {
-                console.log(results);
-                res.render('secrets', {allSecret: results});
+    if(req.isAuthenticated()){
+        User.find({'secret': {$ne: null}}, function(err, results){
+            if(err){
+                console.log(err);            
+            } else {
+                if(results) {
+                    console.log(results);
+                    res.render('secrets', {allSecret: results});
+                }
             }
-        }
-    })
+        });
+    } else {
+        res.redirect('/login');
+    }
 });
 
 // When a user get and post on the login page
@@ -167,7 +172,7 @@ app.post('/submit', function(req, res){
     });
 });
 
-const port = 3000;
+const PORT = 3000;
 app.listen(port, function(){
-    console.log('Server started on port ' + port);
+    console.log('Server started on port ' + PORT);
 });
